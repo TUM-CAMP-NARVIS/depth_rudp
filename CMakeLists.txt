@@ -13,10 +13,10 @@ target_include_directories(depth_rudp PUBLIC include)
 target_link_libraries(depth_rudp PRIVATE ${CONAN_LIBS})
 
 add_executable(draco_enet_server examples/DracoSender.cpp)
-target_link_libraries(draco_enet_server PRIVATE depth_rudp)
+target_link_libraries(draco_enet_server PRIVATE depth_rudp stdc++fs ${CONAN_LIBS})
 
 add_executable(draco_enet_client examples/DracoReceiver.cpp)
-target_link_libraries(draco_enet_client PRIVATE depth_rudp)
+target_link_libraries(draco_enet_client PRIVATE depth_rudp stdc++fs ${CONAN_LIBS})
 
 add_executable(example_basic examples/example_basic.cpp)
 target_link_libraries(example_basic PRIVATE depth_rudp stdc++fs ${CONAN_LIBS})

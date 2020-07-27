@@ -113,7 +113,7 @@ void run_video()
 {
     short CHANGE_THRESHOLD = 10;
     int INVALIDATION_THRESHOLD = 2;
-    const std::string DATA_FOLDER_PATH = "../../../data/";
+    const std::string DATA_FOLDER_PATH = "../../data/";
 
     std::vector<std::string> filenames(get_filenames_from_folder_path(DATA_FOLDER_PATH));
 
