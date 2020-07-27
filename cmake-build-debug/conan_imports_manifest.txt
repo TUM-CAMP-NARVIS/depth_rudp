@@ -1,0 +1,8 @@
+1595838500
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdraco.so: e3548f9be868d6993d0d3d67a7fe7d33
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdraco.so.1: e3548f9be868d6993d0d3d67a7fe7d33
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdracodec.so: 4174a71ebf90daf097ea16155223663f
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdracodec.so.1: 4174a71ebf90daf097ea16155223663f
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdracoenc.so: a5de47963bbc63795d07975128acd4fa
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libdracoenc.so.1: a5de47963bbc63795d07975128acd4fa
+/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/bin/libenet.so: 27e2f4e1ad7678e059092648126bbd10
