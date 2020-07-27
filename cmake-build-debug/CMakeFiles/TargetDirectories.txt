@@ -1,6 +1,0 @@
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/draco_enet_client.dir
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/example_basic.dir
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/draco_enet_server.dir
-/home/evinpinar/Documents/artekmed_project/depth_rudp/cmake-build-debug/CMakeFiles/depth_rudp.dir
