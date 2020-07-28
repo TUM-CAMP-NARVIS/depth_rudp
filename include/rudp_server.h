@@ -30,6 +30,8 @@ private:
     ENetEvent event;
     std::thread serverThread;
 
+    bool client_connected{false};
+
     bool canSend{false};
 
     bool terminated{false};

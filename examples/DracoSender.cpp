@@ -162,7 +162,7 @@ InputFile create_input_file(std::string folder_path, std::string filename)
     return InputFile(filename, std::move(input), width, height);
 }
 
-// Converts 16-bit buffers into OpenCV Mats.
+// Converts 16-bit buffers into 8-bit OpenCV Mats.
 cv::Mat create_depth_mat(int width, int height, const short* depth_buffer)
 {
     int frame_size = width * height;
@@ -190,7 +190,36 @@ cv::Mat create_depth_mat(int width, int height, const short* depth_buffer)
     return bgr_frame;
 }
 
-void trvl_stuff(){
+// Converts 8-bit buffers into 8-bit OpenCV Mats.
+cv::Mat create_depth_mat2(int width, int height, const short* depth_buffer)
+{
+    int frame_size = width * height;
+    std::vector<char> reduced_depth_frame(frame_size);
+    std::vector<char> chroma_frame(frame_size);
+
+    for (int i = 0; i < frame_size; ++i) {
+        reduced_depth_frame[i] = depth_buffer[i];
+        chroma_frame[i] = 128;
+    }
+
+    cv::Mat y_channel(height, width, CV_8UC1, reduced_depth_frame.data());
+    cv::Mat chroma_channel(height, width, CV_8UC1, chroma_frame.data());
+
+    std::vector<cv::Mat> y_cr_cb_channels;
+    y_cr_cb_channels.push_back(y_channel);
+    y_cr_cb_channels.push_back(chroma_channel);
+    y_cr_cb_channels.push_back(chroma_channel);
+
+    cv::Mat y_cr_cb_frame;
+    cv::merge(y_cr_cb_channels, y_cr_cb_frame);
+
+    cv::Mat bgr_frame = y_cr_cb_frame.clone();
+    cvtColor(y_cr_cb_frame, bgr_frame, CV_YCrCb2BGR);
+    return bgr_frame;
+}
+
+
+void trvl_stream_test(){
 
     const std::string DATA_FOLDER_PATH = "../../data/";
     std::vector<std::string> filenames(get_filenames_from_folder_path(DATA_FOLDER_PATH));
@@ -213,34 +242,19 @@ void trvl_stuff(){
 
     auto depth_mat = create_depth_mat(640, 576, depth_buffer.data());
     cv::imshow("Depth", depth_mat);
-    cv::imwrite( "../../depth.png", depth_mat );
-
+    //cv::imwrite( "../../depth.png", depth_mat);
+    std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
+    std::cout << " depth channel" << depth_mat.depth() << ", " << depth_mat.channels() << std::endl;
+    cv::waitKey(0);
     //if (cv::waitKey(1) >= 0)
         //return 1;
 
     //depth_mat.convertTo(depth_mat, CV_16U);
     //std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
     //CV_Assert(depth_mat.type() == CV_16U);
-    short *ps = reinterpret_cast<short *>(depth_mat.ptr<ushort>());
+    //short *ps = reinterpret_cast<short *>(depth_mat.ptr<ushort>());
 
-    input_file.input_stream().read(reinterpret_cast<char*>(ps), frame_size * sizeof(short));
-}
-
-int main(int argc, char **argv)
-{
-
-    // Read depth image
-    std::string depth_file = "../../depth.png";
-    auto depth_mat = cv::imread(depth_file);
-    cv::imshow("Depth", depth_mat);
-
-    int width = depth_mat.cols;
-    int height = depth_mat.rows;
-    int frame_size = width * height;
-
-    //std::vector<short> depth_buffer(frame_size);
-    std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
-    short *depth_buffer = reinterpret_cast<short *>(depth_mat.ptr<ushort>());
+    //input_file.input_stream().read(reinterpret_cast<char*>(ps), frame_size * sizeof(short));
 
     // Create encoder decoder
     short CHANGE_THRESHOLD = 10;
@@ -248,32 +262,124 @@ int main(int argc, char **argv)
     trvl::Encoder encoder(frame_size, CHANGE_THRESHOLD, INVALIDATION_THRESHOLD);
     trvl::Decoder decoder(frame_size);
 
+
+    bool keyframe = false;
+    auto trvl_frame = encoder.encode(depth_buffer.data(), keyframe);
+    auto depth_image = decoder.decode(trvl_frame.data(), keyframe);
+    //auto depth_mat2 = create_depth_mat(640, 576, depth_image.data());
+    auto depth_mat2 = create_depth_mat(640, 576, depth_image.data());
+    std::cout<<"depth map type 2? : " << depth_mat2.type() << std::endl;
+    std::cout << " depth channel 2" << depth_mat2.depth() << ", " << depth_mat2.channels() << std::endl;
+    cv::imshow("Depth", depth_mat2);
+    cv::waitKey(0);
+
+}
+
+void trvl_singledepth_test(){
+    // Read depth image
+    std::string depth_file = "../../depth.png";
+    auto depth_mat = cv::imread(depth_file);
+
+    cv::imshow("Depth", depth_mat);
+    //cv::waitKey(0);
+
+    int width = depth_mat.cols;
+    int height = depth_mat.rows;
+    int frame_size = width * height;
+
+    //std::vector<short> depth_buffer(frame_size);
+    std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
+    std::cout<<"depth map size : " << depth_mat.size() << std::endl;
+    std::cout << " depth channel:" << depth_mat.depth() << ", " << depth_mat.channels() << std::endl;
+    //depth_mat.convertTo(depth_mat, CV_8U);
+    std::vector<short>depth_buffer(depth_mat.begin<short>(), depth_mat.end<short>());
+
+    // Create encoder decoder
+    short CHANGE_THRESHOLD = 10;
+    int INVALIDATION_THRESHOLD = 2;
+    trvl::Encoder encoder(frame_size, CHANGE_THRESHOLD, INVALIDATION_THRESHOLD);
+    trvl::Decoder decoder(frame_size);
+
+    bool keyframe = true;
+    auto trvl_frame = encoder.encode(depth_buffer.data(), keyframe);
+    std::vector<short> depth_image = decoder.decode(trvl_frame.data(), keyframe);
+    //auto depth_mat2 = create_depth_mat(640, 576, depth_image.data());
+    auto depth_mat2 = create_depth_mat2(640, 576, depth_image.data());
+    //depth_mat2.convertTo(depth_mat2, CV_8U);
+    //cv::Mat depth_mat2(576, 640, CV_8U, depth_buffer.data());
+    //cv::Mat depth_mat2(depth_buffer);
+    //resize(depth_mat2, depth_mat2, cvSize(640, 576));
+    std::cout<<"depth map type 2? : " << depth_mat2.type() << std::endl;
+    std::cout<<"depth map size 2 : " << depth_mat2.size() << std::endl;
+    std::cout << " depth channel 2: " << depth_mat2.depth() << ", " << depth_mat2.channels() << std::endl;
+    cv::imshow("Depth2", depth_mat2);
+    cv::waitKey(0);
+}
+
+
+int main(int argc, char **argv)
+{
+
+    //trvl_stream_test();
+    //trvl_singledepth_test();
+
+    /*
+    // Read depth image
+    std::string depth_file = "../../depth.png";
+    auto depth_mat = cv::imread(depth_file);
+
+    cv::imshow("Depth original", depth_mat);
+    //cv::waitKey(0);
+
+    int width = depth_mat.cols;
+    int height = depth_mat.rows;
+    int frame_size = width * height;
+
+    std::vector<short>depth_buffer(depth_mat.begin<short>(), depth_mat.end<short>());
+     */
+    const std::string DATA_FOLDER_PATH = "../../data/";
+    std::vector<std::string> filenames(get_filenames_from_folder_path(DATA_FOLDER_PATH));
+    int filename_index = 1;
+    std::string filename = filenames[filename_index];
+    InputFile input_file(create_input_file(DATA_FOLDER_PATH, filename));
+    int frame_size = input_file.width() * input_file.height();
+    std::vector<short> depth_buffer(frame_size);
+    input_file.input_stream().read(reinterpret_cast<char*>(depth_buffer.data()), frame_size * sizeof(short));
+    auto depth_mat = create_depth_mat(640, 576, depth_buffer.data());
+    cv::imshow("Depth original", depth_mat);
+    //cv::waitKey(0);
+
+    // Create encoder
+    short CHANGE_THRESHOLD = 10;
+    int INVALIDATION_THRESHOLD = 2;
+    trvl::Encoder encoder(frame_size, CHANGE_THRESHOLD, INVALIDATION_THRESHOLD);
+
     // Init server
     rudp_server sender = rudp_server();
     std::cout<<"sender init" << std::endl;
     sender.Init("131.159.10.99", 9898);
 
     // Wait until first client is connected
-    std::cout<<"clients? : " << sender.HasClients() << std::endl;
+    /* std::cout<<"clients? : " << sender.HasClients() << std::endl;
     while(!sender.HasClients()){
-        std::this_thread::sleep_for(std::chrono::milliseconds(700));
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
     std::cout<<"Client connected! " << std::endl;
-    int frame_count = 0;
+
     //while (!input_file.input_stream().eof()) {
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(200)); */
     // Send the depth image to the client
+    int frame_count = 0;
     while(true){
-        bool keyframe = frame_count++ % 30 == 0;
-        auto trvl_frame = encoder.encode(depth_buffer, keyframe);
+        bool keyframe = false; // frame_count++ % 30 == 0;
+        auto trvl_frame = encoder.encode(depth_buffer.data(), keyframe);
         sender.Send(trvl_frame.data(), frame_size * sizeof(short));
 
-        /*auto depth_image = decoder.decode(trvl_frame.data(), keyframe);
-        auto depth_mat = create_depth_mat(640, 576, depth_image.data());
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
 
-        cv::imshow("Depth", depth_mat);
         if (cv::waitKey(1) >= 0)
-            return 1; */
+            return 1;
     }
 
     sender.CleanUp();

@@ -55,6 +55,8 @@ int rudp_server::Init(const char *ipAddress, int port, size_t desiredMemoryCache
                     printf("A new client connected from %x:%u.\n",
                            event.peer->address.host,
                            event.peer->address.port);
+
+                    client_connected = true;
                     /* Store any relevant client information here. */
                     event.peer->data = (void *)"Client information";
 
@@ -68,6 +70,7 @@ int rudp_server::Init(const char *ipAddress, int port, size_t desiredMemoryCache
                     printf("%s disconnected.\n", (char *)event.peer->data);
                     /* Reset the peer's client information. */
                     event.peer->data = NULL;
+                    client_connected = false;
                 }
             }
 
@@ -94,7 +97,8 @@ int rudp_server::Init(const char *ipAddress, int port, size_t desiredMemoryCache
 
 bool rudp_server::HasClients()
 {
-    return server->peerCount > 0;
+    return client_connected;
+    //return server->peerCount > 0;
 }
 
 void rudp_server::Send(const char *buffer, size_t bufferLength)
