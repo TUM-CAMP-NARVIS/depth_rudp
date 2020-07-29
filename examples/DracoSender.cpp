@@ -1,8 +1,4 @@
 
-#include "draco/io/mesh_io.h"
-#include "draco/io/point_cloud_io.h"
-#include "mesh_object_reader.h"
-#include "mesh_object.h"
 #include "rudp_server.h"
 
 #include <experimental/filesystem>
@@ -11,104 +7,6 @@
 #include <opencv2/imgproc/types_c.h>
 
 #include "trvl.h"
-
-[[noreturn]] void send_mesh(){
-    std::vector<float> vertices
-            {
-                    0, 0, 0,
-                    1, 0, 0,
-                    1, 1, 0,
-                    0, 1, 0,
-                    0, 1, 1,
-                    1, 1, 1,
-                    1, 0, 1,
-                    0, 0, 1
-            };
-
-    std::vector<float> normals
-            {
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-                    1, 0, 0,
-            };
-
-    std::vector<int> faces
-            {
-                    0, 2, 1, //face front
-                    0, 3, 2,
-                    2, 3, 4, //face top
-                    2, 4, 5,
-                    1, 2, 5, //face right
-                    1, 5, 6,
-                    0, 7, 4, //face left
-                    0, 4, 3,
-                    5, 4, 7, //face back
-                    5, 7, 6,
-                    0, 6, 7, //face bottom
-                    0, 1, 6
-            };
-
-    std::vector<float> uv
-            {
-                    0, 1,
-                    0, 1,
-                    0, 1,
-                    0, 1,
-                    0, 1,
-                    0, 1,
-                    0, 1,
-                    0, 1
-            };
-
-
-    vertices.clear();
-    int gridMax = 200;
-    for(int x=0;x<gridMax;x++)
-    {
-        for(int y=0;y<gridMax;y++)
-        {
-            for(int z=0;z<gridMax;z++)
-            {
-                vertices.push_back(x);
-                vertices.push_back(y);
-                vertices.push_back(z);
-            }
-        }
-    }
-
-    // ============= Mesh Sender
-    std::cout<<"server start" << std::endl;
-
-    rudp_server sender = rudp_server();
-
-    std::cout<<"sender init" << std::endl;
-
-    sender.Init("131.159.10.99", 9898);
-
-    float updateRateMS = 1.0 / 15;
-
-    while (true)
-    {
-        mesh_object mesh = mesh_object();
-        mesh.vertices = vertices;
-        //mesh.normals = normals;
-        //mesh.faces = faces;
-        //mesh.uv = uv;
-
-        sender.Send(&mesh);
-
-        //usleep((int)(updateRateMS * 1000 * 1000)); // Limit Bitrate
-    }
-
-    sender.CleanUp();
-    // ============= END Mesh Sender
-
-}
 
 class InputFile
 {
@@ -218,7 +116,10 @@ cv::Mat create_depth_mat2(int width, int height, const short* depth_buffer)
     return bgr_frame;
 }
 
-
+// Reads a depth video stream from the 'data' folder. Converts buffer to opencv
+// matrix through create_depth_map function. Then applies compression and
+// decompression. Visualizes the image before and after compression. Results
+// should be identical.
 void trvl_stream_test(){
 
     const std::string DATA_FOLDER_PATH = "../../data/";
@@ -229,7 +130,6 @@ void trvl_stream_test(){
     InputFile input_file(create_input_file(DATA_FOLDER_PATH, filename));
 
     int frame_size = input_file.width() * input_file.height();
-
     std::cout<<" width: "<< input_file.width() <<" width: "<< input_file.height() <<std::endl;
 
     int frame_count = 0;
@@ -239,22 +139,12 @@ void trvl_stream_test(){
     //auto depth_mat = create_depth_mat(640, 576, depth_buffer.data());
     //cv::imshow("Depth", depth_mat);
 
-
     auto depth_mat = create_depth_mat(640, 576, depth_buffer.data());
     cv::imshow("Depth", depth_mat);
     //cv::imwrite( "../../depth.png", depth_mat);
     std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
     std::cout << " depth channel" << depth_mat.depth() << ", " << depth_mat.channels() << std::endl;
     cv::waitKey(0);
-    //if (cv::waitKey(1) >= 0)
-        //return 1;
-
-    //depth_mat.convertTo(depth_mat, CV_16U);
-    //std::cout<<"depth map type? : " << depth_mat.type() << std::endl;
-    //CV_Assert(depth_mat.type() == CV_16U);
-    //short *ps = reinterpret_cast<short *>(depth_mat.ptr<ushort>());
-
-    //input_file.input_stream().read(reinterpret_cast<char*>(ps), frame_size * sizeof(short));
 
     // Create encoder decoder
     short CHANGE_THRESHOLD = 10;
@@ -275,13 +165,16 @@ void trvl_stream_test(){
 
 }
 
+// Reads a single depth image, which was already reduced from 16-bit to 8-bit.
+// So after compression/decompression, one can convert the buffer to opencv mat
+// through create_depth_mat2 function. Also, keyframe should be set to true.
 void trvl_singledepth_test(){
     // Read depth image
     std::string depth_file = "../../depth.png";
     auto depth_mat = cv::imread(depth_file);
 
     cv::imshow("Depth", depth_mat);
-    //cv::waitKey(0);
+    cv::waitKey(0);
 
     int width = depth_mat.cols;
     int height = depth_mat.rows;
@@ -303,12 +196,7 @@ void trvl_singledepth_test(){
     bool keyframe = true;
     auto trvl_frame = encoder.encode(depth_buffer.data(), keyframe);
     std::vector<short> depth_image = decoder.decode(trvl_frame.data(), keyframe);
-    //auto depth_mat2 = create_depth_mat(640, 576, depth_image.data());
     auto depth_mat2 = create_depth_mat2(640, 576, depth_image.data());
-    //depth_mat2.convertTo(depth_mat2, CV_8U);
-    //cv::Mat depth_mat2(576, 640, CV_8U, depth_buffer.data());
-    //cv::Mat depth_mat2(depth_buffer);
-    //resize(depth_mat2, depth_mat2, cvSize(640, 576));
     std::cout<<"depth map type 2? : " << depth_mat2.type() << std::endl;
     std::cout<<"depth map size 2 : " << depth_mat2.size() << std::endl;
     std::cout << " depth channel 2: " << depth_mat2.depth() << ", " << depth_mat2.channels() << std::endl;
@@ -316,27 +204,12 @@ void trvl_singledepth_test(){
     cv::waitKey(0);
 }
 
-
 int main(int argc, char **argv)
 {
 
     //trvl_stream_test();
     //trvl_singledepth_test();
 
-    /*
-    // Read depth image
-    std::string depth_file = "../../depth.png";
-    auto depth_mat = cv::imread(depth_file);
-
-    cv::imshow("Depth original", depth_mat);
-    //cv::waitKey(0);
-
-    int width = depth_mat.cols;
-    int height = depth_mat.rows;
-    int frame_size = width * height;
-
-    std::vector<short>depth_buffer(depth_mat.begin<short>(), depth_mat.end<short>());
-     */
     const std::string DATA_FOLDER_PATH = "../../data/";
     std::vector<std::string> filenames(get_filenames_from_folder_path(DATA_FOLDER_PATH));
     int filename_index = 1;
@@ -346,7 +219,7 @@ int main(int argc, char **argv)
     std::vector<short> depth_buffer(frame_size);
     input_file.input_stream().read(reinterpret_cast<char*>(depth_buffer.data()), frame_size * sizeof(short));
     auto depth_mat = create_depth_mat(640, 576, depth_buffer.data());
-    cv::imshow("Depth original", depth_mat);
+    //cv::imshow("Depth original", depth_mat);
     //cv::waitKey(0);
 
     // Create encoder
@@ -371,12 +244,17 @@ int main(int argc, char **argv)
     std::this_thread::sleep_for(std::chrono::milliseconds(200)); */
     // Send the depth image to the client
     int frame_count = 0;
-    while(true){
-        bool keyframe = false; // frame_count++ % 30 == 0;
+    //while(true){
+    while (!input_file.input_stream().eof()) {
+        // std::vector<short> depth_buffer(frame_size);
+        input_file.input_stream().read(reinterpret_cast<char*>(depth_buffer.data()), frame_size * sizeof(short));
+        bool keyframe = true; //frame_count++ % 30 == 0;
+        std::cout<<"Keyframe sent:  "<< keyframe << " data size: " << frame_size * sizeof(short) << std::endl;
         auto trvl_frame = encoder.encode(depth_buffer.data(), keyframe);
+        std::cout<<"Encoded.  "<< std::endl;
         sender.Send(trvl_frame.data(), frame_size * sizeof(short));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
         if (cv::waitKey(1) >= 0)
             return 1;

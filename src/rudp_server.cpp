@@ -1,6 +1,4 @@
 #include "rudp_server.h"
-#include <mesh_object_reader.h>
-#include "draco/core/cycle_timer.h"
 
 using namespace std;
 
@@ -11,10 +9,6 @@ int rudp_server::Init(const char *ipAddress, int port, size_t desiredMemoryCache
     cl = meshCompression;
     qp = quantPos;
 
-    encoder = std::make_shared<draco_encoder>(cl, qp);
-    encoder->OnCompressDone = [&](draco::EncoderBuffer *data){
-        Send(data->data(), data->size());
-    };
 
     LimitPkgs = (int)(1.0f * desiredMemoryCache / ENET_HOST_DEFAULT_MTU);
 
@@ -112,13 +106,6 @@ void rudp_server::Send(const char *buffer, size_t bufferLength)
 
     enet_host_broadcast(server, 0, packet);
     canSend = false;
-}
-
-void rudp_server::Send(mesh_object *inMesh)
-{
-    encoder->Compress(inMesh);
-
-    // encoder calles OnCompressDone after Compress is finished
 }
 
 void rudp_server::CleanUp()

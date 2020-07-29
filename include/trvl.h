@@ -28,7 +28,6 @@ void update_pixel(Pixel& pixel, short raw_value, short change_threshold, int inv
         return;
     }
 
-
     // Reset the pixel if the depth value indicates the input was invalid two times in a row.
     if (raw_value == 0) {
         ++pixel.invalid_count;
